@@ -2,25 +2,20 @@ using UnityEngine;
 
 public class SpawnBeyblades : MonoBehaviour
 {
-    public GameObject beybladePrefab;  // Prefab káči
-    public float spawnInterval = 1f;   // čas mezi spawnem (v sekundách)
-    public Transform spawnPoint;       // místo spawnování (může být prázdný object)
+    public GameObject beybladePrefab;   // Prefab káči
+    public Transform spawnPoint;         // Místo spawnování
 
-    private float timer = 0f;
+    private GameObject currentBeyblade;  // Odkaz na aktuální káču
 
     void Update()
     {
-        timer += Time.deltaTime;
-
-        if (timer >= spawnInterval)
+        // Pokud ještě žádný Beyblade neexistuje, vytvoř ho
+        if (currentBeyblade == null)
         {
-            // pokud není nastaven spawnPoint, použije se pozice objektu s tímto skriptem
             Vector3 pos = spawnPoint ? spawnPoint.position : transform.position;
             Quaternion rot = spawnPoint ? spawnPoint.rotation : transform.rotation;
 
-            Instantiate(beybladePrefab, pos, rot);
-
-            timer = 0f;
+            currentBeyblade = Instantiate(beybladePrefab, pos, rot);
         }
     }
 }

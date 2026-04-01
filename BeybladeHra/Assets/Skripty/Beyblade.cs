@@ -8,14 +8,19 @@ public class Beyblade : MonoBehaviour
     public float interval = 1f;
 
     [Header("Arena Settings")]
-    public float arenaRadius = 10f;
-    public float wallPushForce = 300f;
+    public float arenaRadius = 0.5f; // průměr 1
+    public float returnForce = 20f;   // síla návratu do středu
+    public float clampForce = 50f;    // dodatečná korekce
+
+    [Header("Grounding")]
+    public float groundOffset = 0.1f;
+    public LayerMask groundMask;
 
     [Header("Health Settings")]
-    public int maxHealth = 1;        // nastavitelné životy
-    public float hitForceBounce = 400f; // odraz při zásahu
-    private int currentHealth;
+    public int maxHealth = 1;
+    public float hitForceBounce = 400f;
 
+    private int currentHealth;
     private Rigidbody rb;
     private float timer = 0f;
 
@@ -30,7 +35,7 @@ public class Beyblade : MonoBehaviour
         // Rotace
         rb.AddTorque(Vector3.forward * torque, ForceMode.Acceleration);
 
-        // Náhodné pohyby
+        // Náhodný pohyb
         timer += Time.fixedDeltaTime;
         if (timer >= interval)
         {
@@ -39,52 +44,68 @@ public class Beyblade : MonoBehaviour
             timer = 0f;
         }
 
-        // Kruhová bariéra
-        Vector3 center = Vector3.zero;
+        // --- Kontrola arény ---
         Vector3 flatPos = new Vector3(transform.position.x, 0f, transform.position.z);
+        float dist = flatPos.magnitude;
 
-        float dist = Vector3.Distance(flatPos, center);
         if (dist > arenaRadius)
         {
-            Vector3 pushDir = (center - flatPos).normalized;
-            rb.AddForce(pushDir * wallPushForce, ForceMode.Acceleration);
+            // vždy přegeneruj směr zpět do středu
+            Vector3 dirToCenter = (-flatPos).normalized;
+
+            // hlavní návratová síla
+            rb.AddForce(dirToCenter * returnForce, ForceMode.Acceleration);
+
+            // tvrdší korekce (aby se nezdržoval mimo)
+            rb.AddForce(dirToCenter * clampForce, ForceMode.Impulse);
+
+            // volitelný hard clamp pozice dovnitř
+            Vector3 clamped = flatPos.normalized * arenaRadius;
+            transform.position = new Vector3(clamped.x, transform.position.y, clamped.z);
         }
 
-        // Pokud spadne pod arénu → zmizí
-        if (transform.position.y < 0)
+        // --- Udržení na zemi ---
+        Ray ray = new Ray(transform.position + Vector3.up * 0.5f, Vector3.down);
+        if (Physics.Raycast(ray, out RaycastHit hit, 2f, groundMask))
+        {
+            Vector3 pos = transform.position;
+            pos.y = hit.point.y + groundOffset;
+            transform.position = pos;
+
+            // zrušení vertikální rychlosti
+            Vector3 vel = rb.linearVelocity;
+            vel.y = 0f;
+            rb.linearVelocity = vel;
+        }
+
+        // fallback
+        if (transform.position.y < -5f)
         {
             Destroy(gameObject);
         }
     }
 
-
-    // --- KOLIZE S JINÝM BEYBLADEM ---
     private void OnCollisionEnter(Collision collision)
     {
         Beyblade other = collision.collider.GetComponent<Beyblade>();
 
         if (other != null)
         {
-            // Zjisti relativní rychlosti – kdo je útočník?
             float mySpeed = rb.linearVelocity.magnitude;
             float otherSpeed = other.rb.linearVelocity.magnitude;
 
-            // Odraz obou
             Vector3 bounceDir = (transform.position - other.transform.position).normalized;
+
             rb.AddForce(bounceDir * hitForceBounce, ForceMode.Impulse);
             other.rb.AddForce(-bounceDir * hitForceBounce, ForceMode.Impulse);
 
-            // Pokud JÁ jsem pomalejší → dostávám damage
             if (mySpeed < otherSpeed)
             {
                 TakeDamage(1);
             }
-            // Pokud já jsem rychlejší → nic se mi nestane
         }
     }
 
-
-    // --- UBÍRÁNÍ ŽIVOTŮ ---
     public void TakeDamage(int amount)
     {
         currentHealth -= amount;

@@ -4968,8 +4968,9 @@ MonoBehaviour:
   torque: 1000
   sideForce: 50
   interval: 1
-  arenaRadius: 10
-  miniForce: 5
+  arenaRadius: 5
+  returnForce: 20
+  clampForce: 50
   groundOffset: 0.1
   groundMask:
     serializedVersion: 2

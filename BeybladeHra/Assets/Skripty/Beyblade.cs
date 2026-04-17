@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Beyblade : MonoBehaviour
@@ -24,14 +25,25 @@ public class Beyblade : MonoBehaviour
     private Rigidbody rb;
     private float timer = 0f;
 
+    private bool start = false;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         currentHealth = maxHealth;
     }
 
+    public void begin() 
+    { 
+        start = true;
+    }
+
     void FixedUpdate()
     {
+        if (start == false)
+        {
+            return;
+        }
         // Rotace
         rb.AddTorque(Vector3.forward * torque, ForceMode.Acceleration);
 
